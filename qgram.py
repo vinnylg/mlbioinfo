@@ -2,11 +2,11 @@ import os
 import sys
 import math
 import numpy as np
-from numpy.lib.function_base import append
 import pandas as pd
 import itertools as it
 from unidecode import unidecode as unidecode
-
+from Bio import SeqIO
+from tqdm import tqdm
 
 def space(text, alfabet):
     parts = filter(lambda x: len(x) > 0,text.split(" "))
@@ -40,13 +40,7 @@ class KGram:
 
         print('\n----------------------------------------------------\n')
 
-    def print_seq(self, x: list, n: int):
-        print(f"\nsequence:\t{''.join(x[0:n])}...{''.join(x[len(x)-n:len(x)])}\n")
-        print(f"x {len(x)} elements in alfabet {self.alfabet}\n")
-
     def freqkgrams(self,seq: list,q:int=1):
-        self.print_seq(seq,10)
-
         grams = dict(self.grams)
         for i in range(0,len(seq)-q):
             window = "".join(seq[i:i+q])
@@ -59,22 +53,24 @@ class KGram:
         grams['freq'] = grams['count'] / (len(seq) - q)
         return grams.sort_index()
 
+
+def process_file(filename, file_type='fasta'):
+    return [ [seq_record.id,str(seq_record.seq)] for seq_record in SeqIO.parse(filename, file_type) ]
+
 def read_and_extract_frequences(qgram):
-    if not os.path.isdir('f"extraction/{qgram.q}grams"'):
+    if not os.path.isdir(f"extraction/{qgram.q}grams"):
         os.makedirs(f"extraction/{qgram.q}grams")
-    for root, _, files in os.walk('dataset'):
-        for filename in files:
-            filein = f"{root}/{filename}"
-            print(f"file: {filein}")
 
-            with open(filein,'r') as seq:
-                seq = space(seq.read(), alfabet)
-                freq = qgram.freqkgrams(seq,qgram.q)
-                freq.index.name = 'grams'
-                freq.to_csv(f"extraction/{qgram.q}grams/{filename.split('.')[0]}.csv")
 
-            print(freq)
-            print('\n----------------------------------------------------\n')
+    print(f'Reading sequences from file: \'dataset/ncbi_dataset/data/genomic.fna\'')
+    sequences = process_file('dataset/ncbi_dataset/data/genomic.fna')
+    print(f'Extract {q}-grams frequence from all {len(sequences)} sequences read')
+
+    for id, seq in tqdm(sequences):
+        seq = space(seq, qgram.alfabet)
+        freq = qgram.freqkgrams(seq,qgram.q)
+        freq.index.name = 'grams'
+        freq.to_csv(f"extraction/{qgram.q}grams/{id}.csv")
 
 if __name__ == '__main__':
 
@@ -82,6 +78,3 @@ if __name__ == '__main__':
     q = int(sys.argv[1])
     qgram = KGram(alfabet,q)
     read_and_extract_frequences(qgram)
-
-
-
