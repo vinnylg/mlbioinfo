@@ -19,6 +19,7 @@ class KGram:
 
     def __init__(self, alfabet: set, q: int):
         self.alfabet = sorted(alfabet)
+        self.q = q
         self.grams = [("".join(p),0) for p in it.product(self.alfabet, repeat=q)]
         print('\n----------------------------------------------------\n')
 
@@ -58,7 +59,9 @@ class KGram:
         grams['freq'] = grams['count'] / (len(seq) - q)
         return grams.sort_index()
 
-def read_and_extract_frequences(qgream):
+def read_and_extract_frequences(qgram):
+    if not os.path.isdir('f"extraction/{qgram.q}grams"'):
+        os.makedirs(f"extraction/{qgram.q}grams")
     for root, _, files in os.walk('dataset'):
         for filename in files:
             filein = f"{root}/{filename}"
@@ -66,9 +69,9 @@ def read_and_extract_frequences(qgream):
 
             with open(filein,'r') as seq:
                 seq = space(seq.read(), alfabet)
-                freq = qgram.freqkgrams(seq,q)
+                freq = qgram.freqkgrams(seq,qgram.q)
                 freq.index.name = 'grams'
-                freq.to_csv(f"extraction/{filename.split('.')[0]}.csv")
+                freq.to_csv(f"extraction/{qgram.q}grams/{filename.split('.')[0]}.csv")
 
             print(freq)
             print('\n----------------------------------------------------\n')
