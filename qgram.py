@@ -28,6 +28,8 @@ class KGram:
         print(f"\n{q}-grams with {len(self.alfabet)} symbols in alfabet: {self.alfabet}")
         self.print_matrix(self.grams, len(self.alfabet)**q)
 
+    def set_filein(self,path):
+        self.filein = path
 
     def print_matrix(self, matrix, size):
         rows = int(math.sqrt(size))
@@ -70,18 +72,15 @@ def get_metadata(path='dataset/ncbi_dataset/data/sars_cov_2.csv'):
     genomas['continent'] = [ str(x).split(';')[0] for x in genomas['Geo Location'] ]
     genomas.loc[genomas['Geo Location'].isna(), 'continent'] = 'Not Reported'
     continents = list(set(genomas['continent']))
-    genomas['id'] = genomas['continent'].apply(lambda x: continents.index(x))
+    genomas['target'] = genomas['continent'].apply(lambda x: continents.index(x))
 
-    print(genomas.groupby(['id','continent'])[['label']].count().rename(columns={'label':'count'}))
+    print(genomas.groupby(['target','continent'])[['label']].count().rename(columns={'label':'count'}))
 
     print('\n----------------------------------------------------\n')
 
-    return genomas[['label','id','continent']]
+    return genomas[['label','target','continent']]
 
 def read_and_extract_frequences(qgram, path):
-    if not os.path.isdir(f"extraction/{qgram.q}grams"):
-        os.makedirs(f"extraction/{qgram.q}grams")
-
 
     print(f"Reading sequences from file: '{path}'\n")
     sequences = process_file(path)
@@ -103,14 +102,34 @@ def read_and_extract_frequences(qgram, path):
     genomas = get_metadata()
     dataset = pd.merge(dataset,genomas,how='left',on='label')
 
-    print(dataset)
 
-    dataset.to_csv(f"extraction/{qgram.q}grams.csv")
+    target = dataset[['label','target','continent']]
+    data = dataset.drop(columns=['label','target','continent']).to_numpy()
+
+    print(f"Target shape: {target.shape}")
+    print(f"Data shape: {data.shape}")
+
+    filename = qgram.filein.split('/')[-1].split('.')[0] if '/' in qgram.filein else qgram.filein.split('\\')[-1].split('.')[0]
+
+    if not os.path.isdir(f"extraction/{filename}/{qgram.q}grams"):
+        os.makedirs(f"extraction/{filename}")
+
+    np.savez_compressed(f"extraction/{filename}/{qgram.q}grams.npz",data=data,target=target, allow_pickle=True)
+
+    print(f"Saved dataset data and target in 'extraction/{filename}/{qgram.q}grams.npz'")
+
+    dataset[['label','target','continent']].to_csv(f"extraction/{filename}/{qgram.q}grams.csv")
+
+    print(f"Saved meta informations from dataset in 'extraction/{filename}/{qgram.q}grams.csv'")
+
     return dataset
 
 if __name__ == '__main__':
+    if len(sys.argv) < 4:
+        raise Exception('USAGE: python ./qgram.py ACTG 2 ./dataset/ncbi_dataset/data/genomic.fna')
 
-    alfabet = {'A','C','T','G'}
-    q = int(sys.argv[1])
+    alfabet = set(list(sys.argv[1]))
+    q = int(sys.argv[2])
     qgram = KGram(alfabet,q)
-    read_and_extract_frequences(qgram,'dataset/ncbi_dataset/data/genomic.fna')
+    qgram.set_filein(sys.argv[3])
+    read_and_extract_frequences(qgram,sys.argv[3])
