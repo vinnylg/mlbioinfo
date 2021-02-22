@@ -106,12 +106,12 @@ def read_and_extract_frequences(qgram, path):
     target = dataset[['label','target','continent']]
     data = dataset.drop(columns=['label','target','continent']).to_numpy()
 
-    print(f"Target shape: {target.shape}")
-    print(f"Data shape: {data.shape}")
+    print(target)
+    print(data)
 
     filename = qgram.filein.split('/')[-1].split('.')[0] if '/' in qgram.filein else qgram.filein.split('\\')[-1].split('.')[0]
 
-    if not os.path.isdir(f"extraction/{filename}/{qgram.q}grams"):
+    if not os.path.isdir(f"extraction/{filename}"):
         os.makedirs(f"extraction/{filename}")
 
     np.savez_compressed(f"extraction/{filename}/{qgram.q}grams.npz",data=data,target=target, allow_pickle=True)
@@ -121,8 +121,6 @@ def read_and_extract_frequences(qgram, path):
     dataset[['label','target','continent']].to_csv(f"extraction/{filename}/{qgram.q}grams.csv")
 
     print(f"Saved meta informations from dataset in 'extraction/{filename}/{qgram.q}grams.csv'")
-
-    return dataset
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
